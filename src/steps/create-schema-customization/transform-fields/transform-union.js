@@ -27,7 +27,7 @@ export const transformListOfUnions = ({ field, fieldName }) => {
   return {
     type: `[${typeName}]`,
     resolve: (source, _, context) => {
-      const resolvedField =
+      let resolvedField =
         source[fieldName] ??
         source[`${field.name}__typename_${field.type.name}`]
 
@@ -37,6 +37,8 @@ export const transformListOfUnions = ({ field, fieldName }) => {
       ) {
         return null
       }
+
+      resolvedField = resolvedField.filter((item) => item)
 
       return resolvedField.map((item) => {
         // @todo use our list of Gatsby node types to do a more performant check
