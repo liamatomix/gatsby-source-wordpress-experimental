@@ -1,0 +1,8 @@
+"use strict";
+
+require("source-map-support/register");
+
+module.exports = {
+  plugins: [`gatsby-plugin-catch-links`]
+};
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbInNyYy9nYXRzYnktY29uZmlnLmpzIl0sIm5hbWVzIjpbIm1vZHVsZSIsImV4cG9ydHMiLCJwbHVnaW5zIl0sIm1hcHBpbmdzIjoiOzs7O0FBQUFBLE1BQU0sQ0FBQ0MsT0FBUCxHQUFpQjtBQUNmQyxFQUFBQSxPQUFPLEVBQUUsQ0FBRSwyQkFBRjtBQURNLENBQWpCIiwic291cmNlc0NvbnRlbnQiOlsibW9kdWxlLmV4cG9ydHMgPSB7XG4gIHBsdWdpbnM6IFtgZ2F0c2J5LXBsdWdpbi1jYXRjaC1saW5rc2BdLFxufVxuIl19

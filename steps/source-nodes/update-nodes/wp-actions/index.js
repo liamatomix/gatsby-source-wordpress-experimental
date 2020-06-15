@@ -1,0 +1,155 @@
+"use strict";
+
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+
+exports.__esModule = true;
+exports.fetchAndRunWpActions = exports.handleWpActions = exports.getWpActions = void 0;
+
+require("source-map-support/register");
+
+var _graphqlQueries = require("../../../../utils/graphql-queries");
+
+var _delete = _interopRequireDefault(require("./delete"));
+
+var _update = _interopRequireDefault(require("./update"));
+
+var _constants = require("../../../../constants");
+
+var _fetchNodesPaginated = require("../../fetch-nodes/fetch-nodes-paginated");
+
+const previouslyFetchedActionIds = [];
+/**
+ * getWpActions
+ *
+ * pull the latest changes from WP and determine which of those changes
+ * require updates in Gatsby, then return valid changes
+ * An example of a non-valid change would be a post that was created
+ * and then immediately deleted.
+ */
+
+const getWpActions = async ({
+  variables,
+  helpers
+}) => {
+  // current time minus 5 seconds so we don't lose updates between the cracks
+  // if someone bulk-edits a list of nodes in WP
+  // @todo make this cursor based so we don't need to do this.
+  // give me changes since x change. if x change doesn't exist,
+  // then we need to fetch everything
+  const sourceTime = Date.now() - 5000; // @todo add pagination in case there are more than 100 actions since the last build
+
+  const actionMonitorActions = await (0, _fetchNodesPaginated.paginatedWpNodeFetch)(Object.assign({
+    contentTypePlural: `actionMonitorActions`,
+    query: _graphqlQueries.actionMonitorQuery,
+    nodeTypeName: `ActionMonitor`,
+    helpers
+  }, variables));
+
+  if (!actionMonitorActions || !actionMonitorActions.length) {
+    return [];
+  }
+
+  const actionsSinceLastUpdate = actionMonitorActions.filter( // remove any actions that were fetched in the last run
+  // (only needed in develop but doesn't hurt in production as previouslyFetchedActionIds will always be empty in prod)
+  ({
+    id
+  }) => !previouslyFetchedActionIds.includes(id)); // store these action ids so we don't run them again if we're interval refetching
+
+  actionsSinceLastUpdate.forEach(({
+    id
+  }) => previouslyFetchedActionIds.push(id));
+  await helpers.cache.set(_constants.LAST_COMPLETED_SOURCE_TIME, sourceTime); // @todo - rework this logic, and make sure it works as expected in all cases.
+  // we only want to use the latest action on each post ID in case multiple
+  // actions were recorded for the same post
+  // for example: if a post was deleted and then immediately published again.
+  // if we kept both actions we would download the node and then delete it
+  // Since we receive the actions in order from newest to oldest, we
+  // can prefer actions at the top of the list.
+
+  const actionabledIds = [];
+  const actions = actionsSinceLastUpdate.filter(action => {
+    const id = action.referencedNodeGlobalRelayID; // check if an action with the same id exists
+
+    const actionExists = actionabledIds.find(actionableId => actionableId === id); // if there isn't one, record the id of this one to filter
+    // out further actions with the same id
+
+    if (!actionExists) {
+      actionabledIds.push(id);
+    } // just keep the action if one doesn't already exist
+
+
+    return !actionExists;
+  });
+  return actions;
+};
+/**
+ * Acts on changes in WordPress to call functions that sync Gatsby with
+ * the latest WP changes
+ */
+
+
+exports.getWpActions = getWpActions;
+
+const handleWpActions = async api => {
+  let {
+    cachedNodeIds
+  } = api;
+
+  switch (api.wpAction.actionType) {
+    // @todo case `PREVIEW`: <- link a revision to it's parent post
+    case `DELETE`:
+      await (0, _delete.default)(api);
+      break;
+
+    case `UPDATE`:
+    case `CREATE`:
+      await (0, _update.default)(api);
+  }
+
+  return cachedNodeIds;
+};
+/**
+ * fetchAndRunWpActions
+ *
+ * fetches a list of latest changes in WordPress
+ * and then acts on those changes
+ */
+
+
+exports.handleWpActions = handleWpActions;
+
+const fetchAndRunWpActions = async ({
+  helpers,
+  pluginOptions,
+  intervalRefetching,
+  since
+}) => {
+  // check for new, edited, or deleted posts in WP "Action Monitor"
+  const wpActions = await getWpActions({
+    variables: {
+      since
+    },
+    helpers
+  });
+  const didUpdate = !!wpActions.length;
+
+  if (didUpdate) {
+    for (const wpAction of wpActions) {
+      // Create, update, and delete nodes
+      await handleWpActions({
+        helpers,
+        pluginOptions,
+        intervalRefetching,
+        wpAction
+      });
+    }
+  }
+
+  return {
+    wpActions,
+    didUpdate
+  };
+};
+
+exports.fetchAndRunWpActions = fetchAndRunWpActions;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uLy4uLy4uL3NyYy9zdGVwcy9zb3VyY2Utbm9kZXMvdXBkYXRlLW5vZGVzL3dwLWFjdGlvbnMvaW5kZXguanMiXSwibmFtZXMiOlsicHJldmlvdXNseUZldGNoZWRBY3Rpb25JZHMiLCJnZXRXcEFjdGlvbnMiLCJ2YXJpYWJsZXMiLCJoZWxwZXJzIiwic291cmNlVGltZSIsIkRhdGUiLCJub3ciLCJhY3Rpb25Nb25pdG9yQWN0aW9ucyIsImNvbnRlbnRUeXBlUGx1cmFsIiwicXVlcnkiLCJhY3Rpb25Nb25pdG9yUXVlcnkiLCJub2RlVHlwZU5hbWUiLCJsZW5ndGgiLCJhY3Rpb25zU2luY2VMYXN0VXBkYXRlIiwiZmlsdGVyIiwiaWQiLCJpbmNsdWRlcyIsImZvckVhY2giLCJwdXNoIiwiY2FjaGUiLCJzZXQiLCJMQVNUX0NPTVBMRVRFRF9TT1VSQ0VfVElNRSIsImFjdGlvbmFibGVkSWRzIiwiYWN0aW9ucyIsImFjdGlvbiIsInJlZmVyZW5jZWROb2RlR2xvYmFsUmVsYXlJRCIsImFjdGlvbkV4aXN0cyIsImZpbmQiLCJhY3Rpb25hYmxlSWQiLCJoYW5kbGVXcEFjdGlvbnMiLCJhcGkiLCJjYWNoZWROb2RlSWRzIiwid3BBY3Rpb24iLCJhY3Rpb25UeXBlIiwiZmV0Y2hBbmRSdW5XcEFjdGlvbnMiLCJwbHVnaW5PcHRpb25zIiwiaW50ZXJ2YWxSZWZldGNoaW5nIiwic2luY2UiLCJ3cEFjdGlvbnMiLCJkaWRVcGRhdGUiXSwibWFwcGluZ3MiOiI7Ozs7Ozs7OztBQUFBOztBQUNBOztBQUNBOztBQUNBOztBQUNBOztBQUVBLE1BQU1BLDBCQUEwQixHQUFHLEVBQW5DO0FBRUE7Ozs7Ozs7OztBQVFPLE1BQU1DLFlBQVksR0FBRyxPQUFPO0FBQUVDLEVBQUFBLFNBQUY7QUFBYUMsRUFBQUE7QUFBYixDQUFQLEtBQWtDO0FBQzVEO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQSxRQUFNQyxVQUFVLEdBQUdDLElBQUksQ0FBQ0MsR0FBTCxLQUFhLElBQWhD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RCxTQUFPO0FBQ0xNLElBQUFBLFNBREs7QUFFTEMsSUFBQUE7QUFGSyxHQUFQO0FBSUQsQ0FoQ00iLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBhY3Rpb25Nb25pdG9yUXVlcnkgfSBmcm9tIFwifi91dGlscy9ncmFwaHFsLXF1ZXJpZXNcIlxuaW1wb3J0IHdwQWN0aW9uREVMRVRFIGZyb20gXCIuL2RlbGV0ZVwiXG5pbXBvcnQgd3BBY3Rpb25VUERBVEUgZnJvbSBcIi4vdXBkYXRlXCJcbmltcG9ydCB7IExBU1RfQ09NUExFVEVEX1NPVVJDRV9USU1FIH0gZnJvbSBcIn4vY29uc3RhbnRzXCJcbmltcG9ydCB7IHBhZ2luYXRlZFdwTm9kZUZldGNoIH0gZnJvbSBcIn4vc3RlcHMvc291cmNlLW5vZGVzL2ZldGNoLW5vZGVzL2ZldGNoLW5vZGVzLXBhZ2luYXRlZFwiXG5cbmNvbnN0IHByZXZpb3VzbHlGZXRjaGVkQWN0aW9uSWRzID0gW11cblxuLyoqXG4gKiBnZXRXcEFjdGlvbnNcbiAqXG4gKiBwdWxsIHRoZSBsYXRlc3QgY2hhbmdlcyBmcm9tIFdQIGFuZCBkZXRlcm1pbmUgd2hpY2ggb2YgdGhvc2UgY2hhbmdlc1xuICogcmVxdWlyZSB1cGRhdGVzIGluIEdhdHNieSwgdGhlbiByZXR1cm4gdmFsaWQgY2hhbmdlc1xuICogQW4gZXhhbXBsZSBvZiBhIG5vbi12YWxpZCBjaGFuZ2Ugd291bGQgYmUgYSBwb3N0IHRoYXQgd2FzIGNyZWF0ZWRcbiAqIGFuZCB0aGVuIGltbWVkaWF0ZWx5IGRlbGV0ZWQuXG4gKi9cbmV4cG9ydCBjb25zdCBnZXRXcEFjdGlvbnMgPSBhc3luYyAoeyB2YXJpYWJsZXMsIGhlbHBlcnMgfSkgPT4ge1xuICAvLyBjdXJyZW50IHRpbWUgbWludXMgNSBzZWNvbmRzIHNvIHdlIGRvbid0IGxvc2UgdXBkYXRlcyBiZXR3ZWVuIHRoZSBjcmFja3NcbiAgLy8gaWYgc29tZW9uZSBidWxrLWVkaXRzIGEgbGlzdCBvZiBub2RlcyBpbiBXUFxuICAvLyBAdG9kbyBtYWtlIHRoaXMgY3Vyc29yIGJhc2VkIHNvIHdlIGRvbid0IG5lZWQgdG8gZG8gdGhpcy5cbiAgLy8gZ2l2ZSBtZSBjaGFuZ2VzIHNpbmNlIHggY2hhbmdlLiBpZiB4IGNoYW5nZSBkb2Vzbid0IGV4aXN0LFxuICAvLyB0aGVuIHdlIG5lZWQgdG8gZmV0Y2ggZXZlcnl0aGluZ1xuICBjb25zdCBzb3VyY2VUaW1lID0gRGF0ZS5ub3coKSAtIDUwMDBcblxuICAvLyBAdG9kbyBhZGQgcGFnaW5hdGlvbiBpbiBjYXNlIHRoZXJlIGFyZSBtb3JlIHRoYW4gMTAwIGFjdGlvbnMgc2luY2UgdGhlIGxhc3QgYnVpbGRcbiAgY29uc3QgYWN0aW9uTW9uaXRvckFjdGlvbnMgPSBhd2FpdCBwYWdpbmF0ZWRXcE5vZGVGZXRjaCh7XG4gICAgY29udGVudFR5cGVQbHVyYWw6IGBhY3Rpb25Nb25pdG9yQWN0aW9uc2AsXG4gICAgcXVlcnk6IGFjdGlvbk1vbml0b3JRdWVyeSxcbiAgICBub2RlVHlwZU5hbWU6IGBBY3Rpb25Nb25pdG9yYCxcbiAgICBoZWxwZXJzLFxuICAgIC4uLnZhcmlhYmxlcyxcbiAgfSlcblxuICBpZiAoIWFjdGlvbk1vbml0b3JBY3Rpb25zIHx8ICFhY3Rpb25Nb25pdG9yQWN0aW9ucy5sZW5ndGgpIHtcbiAgICByZXR1cm4gW11cbiAgfVxuXG4gIGNvbnN0IGFjdGlvbnNTaW5jZUxhc3RVcGRhdGUgPSBhY3Rpb25Nb25pdG9yQWN0aW9ucy5maWx0ZXIoXG4gICAgLy8gcmVtb3ZlIGFueSBhY3Rpb25zIHRoYXQgd2VyZSBmZXRjaGVkIGluIHRoZSBsYXN0IHJ1blxuICAgIC8vIChvbmx5IG5lZWRlZCBpbiBkZXZlbG9wIGJ1dCBkb2Vzbid0IGh1cnQgaW4gcHJvZHVjdGlvbiBhcyBwcmV2aW91c2x5RmV0Y2hlZEFjdGlvbklkcyB3aWxsIGFsd2F5cyBiZSBlbXB0eSBpbiBwcm9kKVxuICAgICh7IGlkIH0pID0+ICFwcmV2aW91c2x5RmV0Y2hlZEFjdGlvbklkcy5pbmNsdWRlcyhpZClcbiAgKVxuXG4gIC8vIHN0b3JlIHRoZXNlIGFjdGlvbiBpZHMgc28gd2UgZG9uJ3QgcnVuIHRoZW0gYWdhaW4gaWYgd2UncmUgaW50ZXJ2YWwgcmVmZXRjaGluZ1xuICBhY3Rpb25zU2luY2VMYXN0VXBkYXRlLmZvckVhY2goKHsgaWQgfSkgPT5cbiAgICBwcmV2aW91c2x5RmV0Y2hlZEFjdGlvbklkcy5wdXNoKGlkKVxuICApXG5cbiAgYXdhaXQgaGVscGVycy5jYWNoZS5zZXQoTEFTVF9DT01QTEVURURfU09VUkNFX1RJTUUsIHNvdXJjZVRpbWUpXG5cbiAgLy8gQHRvZG8gLSByZXdvcmsgdGhpcyBsb2dpYywgYW5kIG1ha2Ugc3VyZSBpdCB3b3JrcyBhcyBleHBlY3RlZCBpbiBhbGwgY2FzZXMuXG4gIC8vIHdlIG9ubHkgd2FudCB0byB1c2UgdGhlIGxhdGVzdCBhY3Rpb24gb24gZWFjaCBwb3N0IElEIGluIGNhc2UgbXVsdGlwbGVcbiAgLy8gYWN0aW9ucyB3ZXJlIHJlY29yZGVkIGZvciB0aGUgc2FtZSBwb3N0XG4gIC8vIGZvciBleGFtcGxlOiBpZiBhIHBvc3Qgd2FzIGRlbGV0ZWQgYW5kIHRoZW4gaW1tZWRpYXRlbHkgcHVibGlzaGVkIGFnYWluLlxuICAvLyBpZiB3ZSBrZXB0IGJvdGggYWN0aW9ucyB3ZSB3b3VsZCBkb3dubG9hZCB0aGUgbm9kZSBhbmQgdGhlbiBkZWxldGUgaXRcbiAgLy8gU2luY2Ugd2UgcmVjZWl2ZSB0aGUgYWN0aW9ucyBpbiBvcmRlciBmcm9tIG5ld2VzdCB0byBvbGRlc3QsIHdlXG4gIC8vIGNhbiBwcmVmZXIgYWN0aW9ucyBhdCB0aGUgdG9wIG9mIHRoZSBsaXN0LlxuICBjb25zdCBhY3Rpb25hYmxlZElkcyA9IFtdXG4gIGNvbnN0IGFjdGlvbnMgPSBhY3Rpb25zU2luY2VMYXN0VXBkYXRlLmZpbHRlcigoYWN0aW9uKSA9PiB7XG4gICAgY29uc3QgaWQgPSBhY3Rpb24ucmVmZXJlbmNlZE5vZGVHbG9iYWxSZWxheUlEXG5cbiAgICAvLyBjaGVjayBpZiBhbiBhY3Rpb24gd2l0aCB0aGUgc2FtZSBpZCBleGlzdHNcbiAgICBjb25zdCBhY3Rpb25FeGlzdHMgPSBhY3Rpb25hYmxlZElkcy5maW5kKFxuICAgICAgKGFjdGlvbmFibGVJZCkgPT4gYWN0aW9uYWJsZUlkID09PSBpZFxuICAgIClcblxuICAgIC8vIGlmIHRoZXJlIGlzbid0IG9uZSwgcmVjb3JkIHRoZSBpZCBvZiB0aGlzIG9uZSB0byBmaWx0ZXJcbiAgICAvLyBvdXQgZnVydGhlciBhY3Rpb25zIHdpdGggdGhlIHNhbWUgaWRcbiAgICBpZiAoIWFjdGlvbkV4aXN0cykge1xuICAgICAgYWN0aW9uYWJsZWRJZHMucHVzaChpZClcbiAgICB9XG5cbiAgICAvLyBqdXN0IGtlZXAgdGhlIGFjdGlvbiBpZiBvbmUgZG9lc24ndCBhbHJlYWR5IGV4aXN0XG4gICAgcmV0dXJuICFhY3Rpb25FeGlzdHNcbiAgfSlcblxuICByZXR1cm4gYWN0aW9uc1xufVxuXG4vKipcbiAqIEFjdHMgb24gY2hhbmdlcyBpbiBXb3JkUHJlc3MgdG8gY2FsbCBmdW5jdGlvbnMgdGhhdCBzeW5jIEdhdHNieSB3aXRoXG4gKiB0aGUgbGF0ZXN0IFdQIGNoYW5nZXNcbiAqL1xuZXhwb3J0IGNvbnN0IGhhbmRsZVdwQWN0aW9ucyA9IGFzeW5jIChhcGkpID0+IHtcbiAgbGV0IHsgY2FjaGVkTm9kZUlkcyB9ID0gYXBpXG5cbiAgc3dpdGNoIChhcGkud3BBY3Rpb24uYWN0aW9uVHlwZSkge1xuICAgIC8vIEB0b2RvIGNhc2UgYFBSRVZJRVdgOiA8LSBsaW5rIGEgcmV2aXNpb24gdG8gaXQncyBwYXJlbnQgcG9zdFxuICAgIGNhc2UgYERFTEVURWA6XG4gICAgICBhd2FpdCB3cEFjdGlvbkRFTEVURShhcGkpXG4gICAgICBicmVha1xuICAgIGNhc2UgYFVQREFURWA6XG4gICAgY2FzZSBgQ1JFQVRFYDpcbiAgICAgIGF3YWl0IHdwQWN0aW9uVVBEQVRFKGFwaSlcbiAgfVxuXG4gIHJldHVybiBjYWNoZWROb2RlSWRzXG59XG5cbi8qKlxuICogZmV0Y2hBbmRSdW5XcEFjdGlvbnNcbiAqXG4gKiBmZXRjaGVzIGEgbGlzdCBvZiBsYXRlc3QgY2hhbmdlcyBpbiBXb3JkUHJlc3NcbiAqIGFuZCB0aGVuIGFjdHMgb24gdGhvc2UgY2hhbmdlc1xuICovXG5leHBvcnQgY29uc3QgZmV0Y2hBbmRSdW5XcEFjdGlvbnMgPSBhc3luYyAoe1xuICBoZWxwZXJzLFxuICBwbHVnaW5PcHRpb25zLFxuICBpbnRlcnZhbFJlZmV0Y2hpbmcsXG4gIHNpbmNlLFxufSkgPT4ge1xuICAvLyBjaGVjayBmb3IgbmV3LCBlZGl0ZWQsIG9yIGRlbGV0ZWQgcG9zdHMgaW4gV1AgXCJBY3Rpb24gTW9uaXRvclwiXG4gIGNvbnN0IHdwQWN0aW9ucyA9IGF3YWl0IGdldFdwQWN0aW9ucyh7XG4gICAgdmFyaWFibGVzOiB7XG4gICAgICBzaW5jZSxcbiAgICB9LFxuICAgIGhlbHBlcnMsXG4gIH0pXG5cbiAgY29uc3QgZGlkVXBkYXRlID0gISF3cEFjdGlvbnMubGVuZ3RoXG5cbiAgaWYgKGRpZFVwZGF0ZSkge1xuICAgIGZvciAoY29uc3Qgd3BBY3Rpb24gb2Ygd3BBY3Rpb25zKSB7XG4gICAgICAvLyBDcmVhdGUsIHVwZGF0ZSwgYW5kIGRlbGV0ZSBub2Rlc1xuICAgICAgYXdhaXQgaGFuZGxlV3BBY3Rpb25zKHtcbiAgICAgICAgaGVscGVycyxcbiAgICAgICAgcGx1Z2luT3B0aW9ucyxcbiAgICAgICAgaW50ZXJ2YWxSZWZldGNoaW5nLFxuICAgICAgICB3cEFjdGlvbixcbiAgICAgIH0pXG4gICAgfVxuICB9XG5cbiAgcmV0dXJuIHtcbiAgICB3cEFjdGlvbnMsXG4gICAgZGlkVXBkYXRlLFxuICB9XG59XG4iXX0=

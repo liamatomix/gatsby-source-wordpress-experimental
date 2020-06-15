@@ -1,0 +1,42 @@
+"use strict";
+
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+
+exports.__esModule = true;
+exports.persistPreviouslyCachedImages = void 0;
+
+require("source-map-support/register");
+
+var _store = _interopRequireDefault(require("../store"));
+
+var _getGatsbyApi = require("../utils/get-gatsby-api");
+
+const persistPreviouslyCachedImages = async () => {
+  const {
+    helpers
+  } = (0, _getGatsbyApi.getGatsbyApi)(); // load up image node id's from cache
+
+  const imageNodeIds = await helpers.cache.get(`image-node-ids`); // if they exist,
+
+  if (imageNodeIds && imageNodeIds.length) {
+    // touch them all so they don't get garbage collected by Gatsby
+    imageNodeIds.forEach(nodeId => helpers.actions.touchNode({
+      nodeId
+    })); // and set them to state to set back to cache later
+    // since we may append more image id's to the store down the line
+    // in onPostBuild, all imageNodeIds in state are cached for the next build
+
+    _store.default.dispatch.imageNodes.setNodeIds(imageNodeIds);
+  }
+
+  const imageNodeMetaByUrl = await helpers.cache.get(`image-node-meta-by-url`);
+
+  if (imageNodeMetaByUrl) {
+    _store.default.dispatch.imageNodes.setState({
+      nodeMetaByUrl: imageNodeMetaByUrl
+    });
+  }
+};
+
+exports.persistPreviouslyCachedImages = persistPreviouslyCachedImages;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uL3NyYy9zdGVwcy9wZXJzaXN0LWNhY2hlZC1pbWFnZXMuanMiXSwibmFtZXMiOlsicGVyc2lzdFByZXZpb3VzbHlDYWNoZWRJbWFnZXMiLCJoZWxwZXJzIiwiaW1hZ2VOb2RlSWRzIiwiY2FjaGUiLCJnZXQiLCJsZW5ndGgiLCJmb3JFYWNoIiwibm9kZUlkIiwiYWN0aW9ucyIsInRvdWNoTm9kZSIsInN0b3JlIiwiZGlzcGF0Y2giLCJpbWFnZU5vZGVzIiwic2V0Tm9kZUlkcyIsImltYWdlTm9kZU1ldGFCeVVybCIsInNldFN0YXRlIiwibm9kZU1ldGFCeVVybCJdLCJtYXBwaW5ncyI6Ijs7Ozs7Ozs7O0FBQUE7O0FBQ0E7O0FBRUEsTUFBTUEsNkJBQTZCLEdBQUcsWUFBWTtBQUNoRCxRQUFNO0FBQUVDLElBQUFBO0FBQUYsTUFBYyxpQ0FBcEIsQ0FEZ0QsQ0FHaEQ7O0FBQ0EsUUFBTUMsWUFBWSxHQUFHLE1BQU1ELE9BQU8sQ0FBQ0UsS0FBUixDQUFjQyxHQUFkLENBQW1CLGdCQUFuQixDQUEzQixDQUpnRCxDQU1oRDs7QUFDQSxNQUFJRixZQUFZLElBQUlBLFlBQVksQ0FBQ0csTUFBakMsRUFBeUM7QUFDdkM7QUFDQUgsSUFBQUEsWUFBWSxDQUFDSSxPQUFiLENBQXNCQyxNQUFELElBQ25CTixPQUFPLENBQUNPLE9BQVIsQ0FBZ0JDLFNBQWhCLENBQTBCO0FBQ3hCRixNQUFBQTtBQUR3QixLQUExQixDQURGLEVBRnVDLENBUXZDO0FBQ0E7QUFDQTs7QUFDQUcsbUJBQU1DLFFBQU4sQ0FBZUMsVUFBZixDQUEwQkMsVUFBMUIsQ0FBcUNYLFlBQXJDO0FBQ0Q7O0FBRUQsUUFBTVksa0JBQWtCLEdBQUcsTUFBTWIsT0FBTyxDQUFDRSxLQUFSLENBQWNDLEdBQWQsQ0FBbUIsd0JBQW5CLENBQWpDOztBQUVBLE1BQUlVLGtCQUFKLEVBQXdCO0FBQ3RCSixtQkFBTUMsUUFBTixDQUFlQyxVQUFmLENBQTBCRyxRQUExQixDQUFtQztBQUNqQ0MsTUFBQUEsYUFBYSxFQUFFRjtBQURrQixLQUFuQztBQUdEO0FBQ0YsQ0E1QkQiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgc3RvcmUgZnJvbSBcIn4vc3RvcmVcIlxuaW1wb3J0IHsgZ2V0R2F0c2J5QXBpIH0gZnJvbSBcIn4vdXRpbHMvZ2V0LWdhdHNieS1hcGlcIlxuXG5jb25zdCBwZXJzaXN0UHJldmlvdXNseUNhY2hlZEltYWdlcyA9IGFzeW5jICgpID0+IHtcbiAgY29uc3QgeyBoZWxwZXJzIH0gPSBnZXRHYXRzYnlBcGkoKVxuXG4gIC8vIGxvYWQgdXAgaW1hZ2Ugbm9kZSBpZCdzIGZyb20gY2FjaGVcbiAgY29uc3QgaW1hZ2VOb2RlSWRzID0gYXdhaXQgaGVscGVycy5jYWNoZS5nZXQoYGltYWdlLW5vZGUtaWRzYClcblxuICAvLyBpZiB0aGV5IGV4aXN0LFxuICBpZiAoaW1hZ2VOb2RlSWRzICYmIGltYWdlTm9kZUlkcy5sZW5ndGgpIHtcbiAgICAvLyB0b3VjaCB0aGVtIGFsbCBzbyB0aGV5IGRvbid0IGdldCBnYXJiYWdlIGNvbGxlY3RlZCBieSBHYXRzYnlcbiAgICBpbWFnZU5vZGVJZHMuZm9yRWFjaCgobm9kZUlkKSA9PlxuICAgICAgaGVscGVycy5hY3Rpb25zLnRvdWNoTm9kZSh7XG4gICAgICAgIG5vZGVJZCxcbiAgICAgIH0pXG4gICAgKVxuXG4gICAgLy8gYW5kIHNldCB0aGVtIHRvIHN0YXRlIHRvIHNldCBiYWNrIHRvIGNhY2hlIGxhdGVyXG4gICAgLy8gc2luY2Ugd2UgbWF5IGFwcGVuZCBtb3JlIGltYWdlIGlkJ3MgdG8gdGhlIHN0b3JlIGRvd24gdGhlIGxpbmVcbiAgICAvLyBpbiBvblBvc3RCdWlsZCwgYWxsIGltYWdlTm9kZUlkcyBpbiBzdGF0ZSBhcmUgY2FjaGVkIGZvciB0aGUgbmV4dCBidWlsZFxuICAgIHN0b3JlLmRpc3BhdGNoLmltYWdlTm9kZXMuc2V0Tm9kZUlkcyhpbWFnZU5vZGVJZHMpXG4gIH1cblxuICBjb25zdCBpbWFnZU5vZGVNZXRhQnlVcmwgPSBhd2FpdCBoZWxwZXJzLmNhY2hlLmdldChgaW1hZ2Utbm9kZS1tZXRhLWJ5LXVybGApXG5cbiAgaWYgKGltYWdlTm9kZU1ldGFCeVVybCkge1xuICAgIHN0b3JlLmRpc3BhdGNoLmltYWdlTm9kZXMuc2V0U3RhdGUoe1xuICAgICAgbm9kZU1ldGFCeVVybDogaW1hZ2VOb2RlTWV0YUJ5VXJsLFxuICAgIH0pXG4gIH1cbn1cblxuZXhwb3J0IHsgcGVyc2lzdFByZXZpb3VzbHlDYWNoZWRJbWFnZXMgfVxuIl19

@@ -1,0 +1,62 @@
+"use strict";
+
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+
+var _interopRequireWildcard = require("@babel/runtime/helpers/interopRequireWildcard");
+
+exports.__esModule = true;
+exports.sourceNodes = void 0;
+
+require("source-map-support/register");
+
+var _fetchNodeUpdates = _interopRequireWildcard(require("./update-nodes/fetch-node-updates"));
+
+var _fetchNodes = require("./fetch-nodes/fetch-nodes");
+
+var _constants = require("../../constants");
+
+var _store = _interopRequireDefault(require("../../store"));
+
+var _fetchAndCreateNonNodeRootFields = _interopRequireDefault(require("./create-nodes/fetch-and-create-non-node-root-fields"));
+
+const sourceNodes = async (helpers, _pluginOptions) => {
+  const {
+    cache,
+    webhookBody: {
+      preview
+    }
+  } = helpers;
+
+  if (preview) {
+    await (0, _fetchNodeUpdates.touchValidNodes)();
+    return;
+  }
+
+  const lastCompletedSourceTime = await cache.get(_constants.LAST_COMPLETED_SOURCE_TIME);
+
+  const {
+    schemaWasChanged
+  } = _store.default.getState().remoteSchema;
+
+  const fetchEverything = !lastCompletedSourceTime || schemaWasChanged; // If this is an uncached build,
+  // or our initial build to fetch and cache everything didn't complete,
+  // pull everything from WPGQL
+
+  if (fetchEverything) {
+    await (0, _fetchNodes.fetchAndCreateAllNodes)();
+    await cache.set(_constants.LAST_COMPLETED_SOURCE_TIME, Date.now());
+  } // If we've already successfully pulled everything from WPGraphQL
+  // just pull the latest changes
+  else if (!fetchEverything) {
+      await (0, _fetchNodeUpdates.default)({
+        since: lastCompletedSourceTime
+      });
+    } // fetch non-node root fields such as settings.
+  // For now, we're refetching them on every build
+
+
+  await (0, _fetchAndCreateNonNodeRootFields.default)();
+};
+
+exports.sourceNodes = sourceNodes;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9zdGVwcy9zb3VyY2Utbm9kZXMvaW5kZXguanMiXSwibmFtZXMiOlsic291cmNlTm9kZXMiLCJoZWxwZXJzIiwiX3BsdWdpbk9wdGlvbnMiLCJjYWNoZSIsIndlYmhvb2tCb2R5IiwicHJldmlldyIsImxhc3RDb21wbGV0ZWRTb3VyY2VUaW1lIiwiZ2V0IiwiTEFTVF9DT01QTEVURURfU09VUkNFX1RJTUUiLCJzY2hlbWFXYXNDaGFuZ2VkIiwic3RvcmUiLCJnZXRTdGF0ZSIsInJlbW90ZVNjaGVtYSIsImZldGNoRXZlcnl0aGluZyIsInNldCIsIkRhdGUiLCJub3ciLCJzaW5jZSJdLCJtYXBwaW5ncyI6Ijs7Ozs7Ozs7Ozs7QUFBQTs7QUFJQTs7QUFFQTs7QUFDQTs7QUFDQTs7QUFFQSxNQUFNQSxXQUFXLEdBQUcsT0FBT0MsT0FBUCxFQUFnQkMsY0FBaEIsS0FBbUM7QUFDckQsUUFBTTtBQUNKQyxJQUFBQSxLQURJO0FBRUpDLElBQUFBLFdBQVcsRUFBRTtBQUFFQyxNQUFBQTtBQUFGO0FBRlQsTUFHRkosT0FISjs7QUFLQSxNQUFJSSxPQUFKLEVBQWE7QUFDWCxVQUFNLHdDQUFOO0FBRUE7QUFDRDs7QUFFRCxRQUFNQyx1QkFBdUIsR0FBRyxNQUFNSCxLQUFLLENBQUNJLEdBQU4sQ0FBVUMscUNBQVYsQ0FBdEM7O0FBRUEsUUFBTTtBQUFFQyxJQUFBQTtBQUFGLE1BQXVCQyxlQUFNQyxRQUFOLEdBQWlCQyxZQUE5Qzs7QUFFQSxRQUFNQyxlQUFlLEdBQUcsQ0FBQ1AsdUJBQUQsSUFBNEJHLGdCQUFwRCxDQWhCcUQsQ0FrQnJEO0FBQ0E7QUFDQTs7QUFDQSxNQUFJSSxlQUFKLEVBQXFCO0FBQ25CLFVBQU0seUNBQU47QUFFQSxVQUFNVixLQUFLLENBQUNXLEdBQU4sQ0FBVU4scUNBQVYsRUFBc0NPLElBQUksQ0FBQ0MsR0FBTCxFQUF0QyxDQUFOO0FBQ0QsR0FKRCxDQU1BO0FBQ0E7QUFQQSxPQVFLLElBQUksQ0FBQ0gsZUFBTCxFQUFzQjtBQUN6QixZQUFNLCtCQUF5QjtBQUM3QkksUUFBQUEsS0FBSyxFQUFFWDtBQURzQixPQUF6QixDQUFOO0FBR0QsS0FqQ29ELENBbUNyRDtBQUNBOzs7QUFDQSxRQUFNLCtDQUFOO0FBQ0QsQ0F0Q0QiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgZmV0Y2hBbmRBcHBseU5vZGVVcGRhdGVzLCB7XG4gIHRvdWNoVmFsaWROb2Rlcyxcbn0gZnJvbSBcIi4vdXBkYXRlLW5vZGVzL2ZldGNoLW5vZGUtdXBkYXRlc1wiXG5cbmltcG9ydCB7IGZldGNoQW5kQ3JlYXRlQWxsTm9kZXMgfSBmcm9tIFwiLi9mZXRjaC1ub2Rlcy9mZXRjaC1ub2Rlc1wiXG5cbmltcG9ydCB7IExBU1RfQ09NUExFVEVEX1NPVVJDRV9USU1FIH0gZnJvbSBcIn4vY29uc3RhbnRzXCJcbmltcG9ydCBzdG9yZSBmcm9tIFwifi9zdG9yZVwiXG5pbXBvcnQgZmV0Y2hBbmRDcmVhdGVOb25Ob2RlUm9vdEZpZWxkcyBmcm9tIFwiLi9jcmVhdGUtbm9kZXMvZmV0Y2gtYW5kLWNyZWF0ZS1ub24tbm9kZS1yb290LWZpZWxkc1wiXG5cbmNvbnN0IHNvdXJjZU5vZGVzID0gYXN5bmMgKGhlbHBlcnMsIF9wbHVnaW5PcHRpb25zKSA9PiB7XG4gIGNvbnN0IHtcbiAgICBjYWNoZSxcbiAgICB3ZWJob29rQm9keTogeyBwcmV2aWV3IH0sXG4gIH0gPSBoZWxwZXJzXG5cbiAgaWYgKHByZXZpZXcpIHtcbiAgICBhd2FpdCB0b3VjaFZhbGlkTm9kZXMoKVxuXG4gICAgcmV0dXJuXG4gIH1cblxuICBjb25zdCBsYXN0Q29tcGxldGVkU291cmNlVGltZSA9IGF3YWl0IGNhY2hlLmdldChMQVNUX0NPTVBMRVRFRF9TT1VSQ0VfVElNRSlcblxuICBjb25zdCB7IHNjaGVtYVdhc0NoYW5nZWQgfSA9IHN0b3JlLmdldFN0YXRlKCkucmVtb3RlU2NoZW1hXG5cbiAgY29uc3QgZmV0Y2hFdmVyeXRoaW5nID0gIWxhc3RDb21wbGV0ZWRTb3VyY2VUaW1lIHx8IHNjaGVtYVdhc0NoYW5nZWRcblxuICAvLyBJZiB0aGlzIGlzIGFuIHVuY2FjaGVkIGJ1aWxkLFxuICAvLyBvciBvdXIgaW5pdGlhbCBidWlsZCB0byBmZXRjaCBhbmQgY2FjaGUgZXZlcnl0aGluZyBkaWRuJ3QgY29tcGxldGUsXG4gIC8vIHB1bGwgZXZlcnl0aGluZyBmcm9tIFdQR1FMXG4gIGlmIChmZXRjaEV2ZXJ5dGhpbmcpIHtcbiAgICBhd2FpdCBmZXRjaEFuZENyZWF0ZUFsbE5vZGVzKClcblxuICAgIGF3YWl0IGNhY2hlLnNldChMQVNUX0NPTVBMRVRFRF9TT1VSQ0VfVElNRSwgRGF0ZS5ub3coKSlcbiAgfVxuXG4gIC8vIElmIHdlJ3ZlIGFscmVhZHkgc3VjY2Vzc2Z1bGx5IHB1bGxlZCBldmVyeXRoaW5nIGZyb20gV1BHcmFwaFFMXG4gIC8vIGp1c3QgcHVsbCB0aGUgbGF0ZXN0IGNoYW5nZXNcbiAgZWxzZSBpZiAoIWZldGNoRXZlcnl0aGluZykge1xuICAgIGF3YWl0IGZldGNoQW5kQXBwbHlOb2RlVXBkYXRlcyh7XG4gICAgICBzaW5jZTogbGFzdENvbXBsZXRlZFNvdXJjZVRpbWUsXG4gICAgfSlcbiAgfVxuXG4gIC8vIGZldGNoIG5vbi1ub2RlIHJvb3QgZmllbGRzIHN1Y2ggYXMgc2V0dGluZ3MuXG4gIC8vIEZvciBub3csIHdlJ3JlIHJlZmV0Y2hpbmcgdGhlbSBvbiBldmVyeSBidWlsZFxuICBhd2FpdCBmZXRjaEFuZENyZWF0ZU5vbk5vZGVSb290RmllbGRzKClcbn1cblxuZXhwb3J0IHsgc291cmNlTm9kZXMgfVxuIl19

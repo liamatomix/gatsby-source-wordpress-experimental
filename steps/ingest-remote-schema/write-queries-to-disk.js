@@ -1,0 +1,69 @@
+"use strict";
+
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+
+exports.__esModule = true;
+exports.writeQueriesToDisk = void 0;
+
+require("source-map-support/register");
+
+var _fsExtra = _interopRequireDefault(require("fs-extra"));
+
+var _store = _interopRequireDefault(require("../../store"));
+
+var _prettier = _interopRequireDefault(require("prettier"));
+
+var _formatLogMessage = require("../../utils/format-log-message");
+
+const writeQueriesToDisk = async ({
+  reporter
+}, pluginOptions) => {
+  var _pluginOptions$debug, _pluginOptions$debug$;
+
+  if (!(pluginOptions === null || pluginOptions === void 0 ? void 0 : (_pluginOptions$debug = pluginOptions.debug) === null || _pluginOptions$debug === void 0 ? void 0 : (_pluginOptions$debug$ = _pluginOptions$debug.graphql) === null || _pluginOptions$debug$ === void 0 ? void 0 : _pluginOptions$debug$.writeQueriesToDisk)) {
+    return;
+  }
+
+  const {
+    remoteSchema
+  } = _store.default.getState(); // the queries only change when the remote schema changes
+  // no need to write them to disk in that case
+
+
+  if (!remoteSchema.schemaWasChanged) {
+    return;
+  }
+
+  const activity = reporter.activityTimer((0, _formatLogMessage.formatLogMessage)(`writing GraphQL queries to disk at ./WordPress/GraphQL/`));
+  activity.start();
+  const wordPressGraphQLDirectory = `${process.cwd()}/WordPress/GraphQL`;
+
+  for (const {
+    nodeListQueries,
+    nodeQuery,
+    previewQuery,
+    typeInfo
+  } of Object.values(remoteSchema.nodeQueries)) {
+    const directory = `${wordPressGraphQLDirectory}/${typeInfo.nodesTypeName}`;
+    await _fsExtra.default.ensureDir(directory);
+    await _fsExtra.default.writeFile(`${directory}/node-list-query.graphql`, _prettier.default.format(nodeListQueries[0], {
+      parser: `graphql`
+    }), `utf8`);
+    await _fsExtra.default.writeFile(`${directory}/node-single-query.graphql`, _prettier.default.format(nodeQuery, {
+      parser: `graphql`
+    }), `utf8`);
+    await _fsExtra.default.writeFile(`${directory}/node-preview-query.graphql`, _prettier.default.format(previewQuery, {
+      parser: `graphql`
+    }), `utf8`);
+  }
+
+  const directory = `${wordPressGraphQLDirectory}/RootQuery`;
+  await _fsExtra.default.ensureDir(directory);
+  await _fsExtra.default.writeFile(`${directory}/non-node-root-query.graphql`, _prettier.default.format(remoteSchema.nonNodeQuery, {
+    parser: `graphql`
+  }));
+  activity.end();
+};
+
+exports.writeQueriesToDisk = writeQueriesToDisk;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9zdGVwcy9pbmdlc3QtcmVtb3RlLXNjaGVtYS93cml0ZS1xdWVyaWVzLXRvLWRpc2suanMiXSwibmFtZXMiOlsid3JpdGVRdWVyaWVzVG9EaXNrIiwicmVwb3J0ZXIiLCJwbHVnaW5PcHRpb25zIiwiZGVidWciLCJncmFwaHFsIiwicmVtb3RlU2NoZW1hIiwic3RvcmUiLCJnZXRTdGF0ZSIsInNjaGVtYVdhc0NoYW5nZWQiLCJhY3Rpdml0eSIsImFjdGl2aXR5VGltZXIiLCJzdGFydCIsIndvcmRQcmVzc0dyYXBoUUxEaXJlY3RvcnkiLCJwcm9jZXNzIiwiY3dkIiwibm9kZUxpc3RRdWVyaWVzIiwibm9kZVF1ZXJ5IiwicHJldmlld1F1ZXJ5IiwidHlwZUluZm8iLCJPYmplY3QiLCJ2YWx1ZXMiLCJub2RlUXVlcmllcyIsImRpcmVjdG9yeSIsIm5vZGVzVHlwZU5hbWUiLCJmcyIsImVuc3VyZURpciIsIndyaXRlRmlsZSIsInByZXR0aWVyIiwiZm9ybWF0IiwicGFyc2VyIiwibm9uTm9kZVF1ZXJ5IiwiZW5kIl0sIm1hcHBpbmdzIjoiOzs7Ozs7Ozs7QUFBQTs7QUFDQTs7QUFDQTs7QUFDQTs7QUFFTyxNQUFNQSxrQkFBa0IsR0FBRyxPQUFPO0FBQUVDLEVBQUFBO0FBQUYsQ0FBUCxFQUFxQkMsYUFBckIsS0FBdUM7QUFBQTs7QUFDdkUsTUFBSSxFQUFDQSxhQUFELGFBQUNBLGFBQUQsK0NBQUNBLGFBQWEsQ0FBRUMsS0FBaEIsa0ZBQUMscUJBQXNCQyxPQUF2QiwwREFBQyxzQkFBK0JKLGtCQUFoQyxDQUFKLEVBQXdEO0FBQ3REO0FBQ0Q7O0FBRUQsUUFBTTtBQUFFSyxJQUFBQTtBQUFGLE1BQW1CQyxlQUFNQyxRQUFOLEVBQXpCLENBTHVFLENBT3ZFO0FBQ0E7OztBQUNBLE1BQUksQ0FBQ0YsWUFBWSxDQUFDRyxnQkFBbEIsRUFBb0M7QUFDbEM7QUFDRDs7QUFFRCxRQUFNQyxRQUFRLEdBQUdSLFFBQVEsQ0FBQ1MsYUFBVCxDQUNmLHdDQUFrQix5REFBbEIsQ0FEZSxDQUFqQjtBQUlBRCxFQUFBQSxRQUFRLENBQUNFLEtBQVQ7QUFDQSxRQUFNQyx5QkFBeUIsR0FBSSxHQUFFQyxPQUFPLENBQUNDLEdBQVIsRUFBYyxvQkFBbkQ7O0FBRUEsT0FBSyxNQUFNO0FBQ1RDLElBQUFBLGVBRFM7QUFFVEMsSUFBQUEsU0FGUztBQUdUQyxJQUFBQSxZQUhTO0FBSVRDLElBQUFBO0FBSlMsR0FBWCxJQUtLQyxNQUFNLENBQUNDLE1BQVAsQ0FBY2YsWUFBWSxDQUFDZ0IsV0FBM0IsQ0FMTCxFQUs4QztBQUM1QyxVQUFNQyxTQUFTLEdBQUksR0FBRVYseUJBQTBCLElBQUdNLFFBQVEsQ0FBQ0ssYUFBYyxFQUF6RTtBQUVBLFVBQU1DLGlCQUFHQyxTQUFILENBQWFILFNBQWIsQ0FBTjtBQUVBLFVBQU1FLGlCQUFHRSxTQUFILENBQ0gsR0FBRUosU0FBVSwwQkFEVCxFQUVKSyxrQkFBU0MsTUFBVCxDQUFnQmIsZUFBZSxDQUFDLENBQUQsQ0FBL0IsRUFBb0M7QUFBRWMsTUFBQUEsTUFBTSxFQUFHO0FBQVgsS0FBcEMsQ0FGSSxFQUdILE1BSEcsQ0FBTjtBQU1BLFVBQU1MLGlCQUFHRSxTQUFILENBQ0gsR0FBRUosU0FBVSw0QkFEVCxFQUVKSyxrQkFBU0MsTUFBVCxDQUFnQlosU0FBaEIsRUFBMkI7QUFBRWEsTUFBQUEsTUFBTSxFQUFHO0FBQVgsS0FBM0IsQ0FGSSxFQUdILE1BSEcsQ0FBTjtBQU1BLFVBQU1MLGlCQUFHRSxTQUFILENBQ0gsR0FBRUosU0FBVSw2QkFEVCxFQUVKSyxrQkFBU0MsTUFBVCxDQUFnQlgsWUFBaEIsRUFBOEI7QUFBRVksTUFBQUEsTUFBTSxFQUFHO0FBQVgsS0FBOUIsQ0FGSSxFQUdILE1BSEcsQ0FBTjtBQUtEOztBQUVELFFBQU1QLFNBQVMsR0FBSSxHQUFFVix5QkFBMEIsWUFBL0M7QUFFQSxRQUFNWSxpQkFBR0MsU0FBSCxDQUFhSCxTQUFiLENBQU47QUFFQSxRQUFNRSxpQkFBR0UsU0FBSCxDQUNILEdBQUVKLFNBQVUsOEJBRFQsRUFFSkssa0JBQVNDLE1BQVQsQ0FBZ0J2QixZQUFZLENBQUN5QixZQUE3QixFQUEyQztBQUFFRCxJQUFBQSxNQUFNLEVBQUc7QUFBWCxHQUEzQyxDQUZJLENBQU47QUFLQXBCLEVBQUFBLFFBQVEsQ0FBQ3NCLEdBQVQ7QUFDRCxDQTNETSIsInNvdXJjZXNDb250ZW50IjpbImltcG9ydCBmcyBmcm9tIFwiZnMtZXh0cmFcIlxuaW1wb3J0IHN0b3JlIGZyb20gXCJ+L3N0b3JlXCJcbmltcG9ydCBwcmV0dGllciBmcm9tIFwicHJldHRpZXJcIlxuaW1wb3J0IHsgZm9ybWF0TG9nTWVzc2FnZSB9IGZyb20gXCJ+L3V0aWxzL2Zvcm1hdC1sb2ctbWVzc2FnZVwiXG5cbmV4cG9ydCBjb25zdCB3cml0ZVF1ZXJpZXNUb0Rpc2sgPSBhc3luYyAoeyByZXBvcnRlciB9LCBwbHVnaW5PcHRpb25zKSA9PiB7XG4gIGlmICghcGx1Z2luT3B0aW9ucz8uZGVidWc/LmdyYXBocWw/LndyaXRlUXVlcmllc1RvRGlzaykge1xuICAgIHJldHVyblxuICB9XG5cbiAgY29uc3QgeyByZW1vdGVTY2hlbWEgfSA9IHN0b3JlLmdldFN0YXRlKClcblxuICAvLyB0aGUgcXVlcmllcyBvbmx5IGNoYW5nZSB3aGVuIHRoZSByZW1vdGUgc2NoZW1hIGNoYW5nZXNcbiAgLy8gbm8gbmVlZCB0byB3cml0ZSB0aGVtIHRvIGRpc2sgaW4gdGhhdCBjYXNlXG4gIGlmICghcmVtb3RlU2NoZW1hLnNjaGVtYVdhc0NoYW5nZWQpIHtcbiAgICByZXR1cm5cbiAgfVxuXG4gIGNvbnN0IGFjdGl2aXR5ID0gcmVwb3J0ZXIuYWN0aXZpdHlUaW1lcihcbiAgICBmb3JtYXRMb2dNZXNzYWdlKGB3cml0aW5nIEdyYXBoUUwgcXVlcmllcyB0byBkaXNrIGF0IC4vV29yZFByZXNzL0dyYXBoUUwvYClcbiAgKVxuXG4gIGFjdGl2aXR5LnN0YXJ0KClcbiAgY29uc3Qgd29yZFByZXNzR3JhcGhRTERpcmVjdG9yeSA9IGAke3Byb2Nlc3MuY3dkKCl9L1dvcmRQcmVzcy9HcmFwaFFMYFxuXG4gIGZvciAoY29uc3Qge1xuICAgIG5vZGVMaXN0UXVlcmllcyxcbiAgICBub2RlUXVlcnksXG4gICAgcHJldmlld1F1ZXJ5LFxuICAgIHR5cGVJbmZvLFxuICB9IG9mIE9iamVjdC52YWx1ZXMocmVtb3RlU2NoZW1hLm5vZGVRdWVyaWVzKSkge1xuICAgIGNvbnN0IGRpcmVjdG9yeSA9IGAke3dvcmRQcmVzc0dyYXBoUUxEaXJlY3Rvcnl9LyR7dHlwZUluZm8ubm9kZXNUeXBlTmFtZX1gXG5cbiAgICBhd2FpdCBmcy5lbnN1cmVEaXIoZGlyZWN0b3J5KVxuXG4gICAgYXdhaXQgZnMud3JpdGVGaWxlKFxuICAgICAgYCR7ZGlyZWN0b3J5fS9ub2RlLWxpc3QtcXVlcnkuZ3JhcGhxbGAsXG4gICAgICBwcmV0dGllci5mb3JtYXQobm9kZUxpc3RRdWVyaWVzWzBdLCB7IHBhcnNlcjogYGdyYXBocWxgIH0pLFxuICAgICAgYHV0ZjhgXG4gICAgKVxuXG4gICAgYXdhaXQgZnMud3JpdGVGaWxlKFxuICAgICAgYCR7ZGlyZWN0b3J5fS9ub2RlLXNpbmdsZS1xdWVyeS5ncmFwaHFsYCxcbiAgICAgIHByZXR0aWVyLmZvcm1hdChub2RlUXVlcnksIHsgcGFyc2VyOiBgZ3JhcGhxbGAgfSksXG4gICAgICBgdXRmOGBcbiAgICApXG5cbiAgICBhd2FpdCBmcy53cml0ZUZpbGUoXG4gICAgICBgJHtkaXJlY3Rvcnl9L25vZGUtcHJldmlldy1xdWVyeS5ncmFwaHFsYCxcbiAgICAgIHByZXR0aWVyLmZvcm1hdChwcmV2aWV3UXVlcnksIHsgcGFyc2VyOiBgZ3JhcGhxbGAgfSksXG4gICAgICBgdXRmOGBcbiAgICApXG4gIH1cblxuICBjb25zdCBkaXJlY3RvcnkgPSBgJHt3b3JkUHJlc3NHcmFwaFFMRGlyZWN0b3J5fS9Sb290UXVlcnlgXG5cbiAgYXdhaXQgZnMuZW5zdXJlRGlyKGRpcmVjdG9yeSlcblxuICBhd2FpdCBmcy53cml0ZUZpbGUoXG4gICAgYCR7ZGlyZWN0b3J5fS9ub24tbm9kZS1yb290LXF1ZXJ5LmdyYXBocWxgLFxuICAgIHByZXR0aWVyLmZvcm1hdChyZW1vdGVTY2hlbWEubm9uTm9kZVF1ZXJ5LCB7IHBhcnNlcjogYGdyYXBocWxgIH0pXG4gIClcblxuICBhY3Rpdml0eS5lbmQoKVxufVxuIl19
