@@ -271,12 +271,14 @@ const replaceNodeHtmlImages = async ({
     return nodeString
   }
 
-  const imageUrlMatches = execall(imgSrcRemoteFileRegex, nodeString)
+  const imageUrlMatches = execall(imgSrcRemoteFileRegex, nodeString).filter(({ match }) => {
+    return !match.includes('.svg')
+  });
 
   const imgTagMatches = execall(imgTagRegex, nodeString).filter(({ match }) => {
     // @todo make it a plugin option to fetch non-wp images
     // here we're filtering out image tags that don't contain our site url
-    const isHostedInWp = match.includes(wpUrl)
+    const isHostedInWp = match.includes(wpUrl) && !match.includes('.svg')
 
     return isHostedInWp
   })
